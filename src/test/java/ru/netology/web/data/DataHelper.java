@@ -1,10 +1,14 @@
 package ru.netology.web.data;
 
-import com.github.javafaker.Faker;
 import lombok.Value;
+import lombok.val;
+import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.handlers.ScalarHandler;
+
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class DataHelper {
-
   private DataHelper() {
   }
 
@@ -14,17 +18,57 @@ public class DataHelper {
     private String password;
   }
 
-  public static AuthInfo getValidAuthInfo() {
+  public static AuthInfo getAuthInfo() {
     return new AuthInfo("vasya", "qwerty123");
   }
 
-  public static AuthInfo getAuthInfoInvalidPassword() {
-    Faker faker = new Faker();
-    return new AuthInfo("vasya", faker.internet().password());
+  public static AuthInfo getWrongAuthInfo() {
+    return new AuthInfo("vasya", "123qwerty");
   }
 
   @Value
   public static class VerificationCode {
     private String code;
+  }
+
+  public static VerificationCode getVerificationCodeFor() {
+    val codeSQL = "SELECT code FROM auth_codes INNER JOIN users ON auth_codes.user_id = users.id;";
+    val runner = new QueryRunner();
+    String code = "";
+
+    try (
+            val conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/app", "app", "pass");
+    ) {
+      code = runner.query(conn, codeSQL, new ScalarHandler<>());
+    } catch (SQLException throwables) {
+      throwables.printStackTrace();
+    }
+    return new VerificationCode(code);
+  }
+
+  public static void clearCodeAuth() throws SQLException {
+    val codeSQL = "DELETE FROM auth_codes;";
+    val runner = new QueryRunner();
+    try (
+            val conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/app", "app", "pass");
+    ) {
+      runner.update(conn, codeSQL);
+    }
+  }
+
+  public static void clearDB() throws SQLException {
+    val codeSQL = "DELETE FROM users;";
+    val codeSQL2 = "DELETE FROM cards;";
+    val runner = new QueryRunner();
+    try (
+            val conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/app", "app", "pass");
+    ) {
+      runner.update(conn, codeSQL2);
+      runner.update(conn, codeSQL);
+    }
+  }
+
+  public static VerificationCode getVerificationWrongCode() {
+    return new VerificationCode("12345");
   }
 }
